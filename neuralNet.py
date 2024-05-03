@@ -57,8 +57,10 @@ class NeuralNetwork(nn.Module):
       nn.Flatten(),
       nn.Linear(41272, 128),
       nn.ReLU(),
+      nn.Dropout(0.5),
       nn.Linear(128,64),
       nn.ReLU(),
+      nn.Dropout(0.5),
       nn.Linear(64, 102)
     )
   def forward(self,x):

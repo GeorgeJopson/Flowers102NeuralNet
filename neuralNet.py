@@ -30,13 +30,13 @@ stdValues = [s/len(training_data) for s in stdValues]
 # to those dimensions
 transformationTraining = transforms.Compose([
   transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-  transforms.Resize((270,310)),
+  transforms.Resize((160,186)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
 
 transformationTest = transforms.Compose([
-  transforms.Resize((270,310)),
+  transforms.Resize((160,186)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -79,17 +79,17 @@ class NeuralNetwork(nn.Module):
     self.layers = nn.Sequential(
       nn.Conv2d(3, 4, kernel_size=3,padding=1,padding_mode="replicate"),
       nn.ReLU(),
-      nn.Conv2d(4,8,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
+      nn.MaxPool2d(kernel_size=4),
+      nn.Dropout(0,5),
+      nn.Conv2d(4,4,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=2),
+      nn.Dropout(0,5),
       nn.Flatten(),
-      nn.Linear(41272, 128),
+      nn.Linear(440, 128),
       nn.ReLU(),
       nn.Dropout(0.5),
-      nn.Linear(128,64),
-      nn.ReLU(),
-      nn.Dropout(0.5),
-      nn.Linear(64, 102)
+      nn.Linear(128, 102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -109,7 +109,6 @@ def train(dataloader, model, loss_func, optimizer):
   counter = 0
   for batch, (X,y) in enumerate(dataloader):
     counter+=1
-    print(batch)
     X,y = X.to(device), y.to(device)
     # Compute prediction error
     pred = model(X)
@@ -120,7 +119,7 @@ def train(dataloader, model, loss_func, optimizer):
     optimizer.zero_grad()
     if batch % 5 == 0:
       loss,current = loss.item(),(batch+1)*len(X)
-      print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+      #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
   
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -136,18 +135,20 @@ def test(dataloader, model, loss_fn):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-print("Hello")
+
+print("Starting training")
 
 epochCounter=0
 while epochCounter<=200:
   for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1
-      print(f"Epoch {epochCounter}\n-------------------------------")
-      print("Training")
+      #print(f"Epoch {epochCounter}\n-------------------------------")
+      #print("Training")
       train(train_dataloader, model, loss_func, optimizer)
       epochEndTime = time.time()
-      print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
+      #print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
+  print(f"Epoch {epochCounter}")
   print("Testing on Training Set")
   test(train_dataloader,model,loss_func)
   print("Testing on Test Set")

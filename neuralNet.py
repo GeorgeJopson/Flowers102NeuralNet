@@ -2,15 +2,43 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 import scipy
 import time
 
+normaliseCalcTransformation = transforms.Compose([
+  transforms.Resize((270,310)),
+  transforms.ToTensor(),
+])
+training_data = datasets.Flowers102(
+  root="data",
+  split="train",
+  download=True,
+  transform=normaliseCalcTransformation
+)
+# [R,G,B]
+meanValues = [0,0,0]
+stdValues = [0,0,0]
+for images, _ in training_data:
+   for i in range(3):
+      meanValues[i]+=torch.mean(images[i,:,:])
+      stdValues[i]+=torch.std(images[i,:,:])
+meanValues = [m/len(training_data) for m in meanValues]
+stdValues = [s/len(training_data) for s in stdValues]
+
 # The average height x width of each image is 540x620 so I am going to resize all images
 # to those dimensions
-transformation = transforms.Compose([
+transformationTraining = transforms.Compose([
+  transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
   transforms.Resize((270,310)),
-  transforms.ToTensor()
+  transforms.ToTensor(),
+  transforms.Normalize(mean = meanValues, std = stdValues)
+])
+
+transformationTest = transforms.Compose([
+  transforms.Resize((270,310)),
+  transforms.ToTensor(),
+  transforms.Normalize(mean = meanValues, std = stdValues)
 ])
 
 print("Download training data")
@@ -18,7 +46,7 @@ training_data = datasets.Flowers102(
   root="data",
   split="train",
   download=True,
-  transform=transformation
+  transform=transformationTraining
 )
 print("Finished downloading training data")
 
@@ -27,7 +55,7 @@ test_data = datasets.Flowers102(
   root="data",
   split="test",
   download=True,
-  transform=transformation
+  transform=transformationTest
 )
 print("Finished downloading test data")
 
@@ -111,7 +139,7 @@ def test(dataloader, model, loss_fn):
 print("Hello")
 
 epochCounter=0
-while True:
+while epochCounter<=200:
   for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1

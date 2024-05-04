@@ -25,7 +25,7 @@ transformationTraining = transforms.Compose([
 ])
 
 transformationVal = transforms.Compose([
-  transforms.Resize(227),
+  transforms.Resize((227,227)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -148,14 +148,14 @@ print("Starting training")
 
 epochCounter=0
 while epochCounter<=200:
-  for t in range(5):
+  for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1
-      print(f"Epoch {epochCounter}\n-------------------------------")
-      print("Training")
+      #print(f"Epoch {epochCounter}\n-------------------------------")
+      #print("Training")
       train(train_dataloader, model, loss_func, optimizer)
       epochEndTime = time.time()
-      print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
+      #print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
   print(f"Epoch {epochCounter}")
   print("Testing on Training Set")
   test(train_dataloader,model,loss_func)

@@ -29,8 +29,9 @@ stdValues = [s/len(training_data) for s in stdValues]
 # The average height x width of each image is 540x620 so I am going to resize all images
 # to those dimensions
 transformationTraining = transforms.Compose([
-  transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
-  transforms.Resize((160,186)),
+  transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.4),
+  transforms.RandomResizedCrop(size=(160,186)),
+  transforms.RandomHorizontalFlip(0.5),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -51,9 +52,9 @@ training_data = datasets.Flowers102(
 print("Finished downloading training data")
 
 print("Downloading test data")
-test_data = datasets.Flowers102(
+validation_data = datasets.Flowers102(
   root="data",
-  split="test",
+  split="val",
   download=True,
   transform=transformationTest
 )
@@ -63,7 +64,7 @@ batch_size = 64
 
 # Create data loaders.
 train_dataloader = DataLoader(training_data, batch_size=batch_size)
-test_dataloader = DataLoader(test_data,batch_size=batch_size)
+validation_dataloader = DataLoader(validation_data,batch_size=batch_size)
 
 # Find which device we can run the project on
 device = "cpu"
@@ -77,19 +78,16 @@ class NeuralNetwork(nn.Module):
   def __init__(self):
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 4, kernel_size=3,padding=1,padding_mode="replicate"),
+      nn.Conv2d(3, 3, kernel_size=3,padding=1,padding_mode="replicate"),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=4),
       nn.Dropout(0,5),
-      nn.Conv2d(4,4,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
+      nn.Conv2d(3,3,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=2),
       nn.Dropout(0,5),
       nn.Flatten(),
-      nn.Linear(440, 128),
-      nn.ReLU(),
-      nn.Dropout(0.5),
-      nn.Linear(128, 102)
+      nn.Linear(330, 102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -140,7 +138,7 @@ print("Starting training")
 
 epochCounter=0
 while epochCounter<=200:
-  for t in range(20):
+  for t in range(5):
       epochStartTime = time.time()
       epochCounter+=1
       #print(f"Epoch {epochCounter}\n-------------------------------")
@@ -151,7 +149,7 @@ while epochCounter<=200:
   print(f"Epoch {epochCounter}")
   print("Testing on Training Set")
   test(train_dataloader,model,loss_func)
-  print("Testing on Test Set")
-  test(test_dataloader, model, loss_func)
+  print("Testing on Validation Set")
+  test(validation_dataloader, model, loss_func)
 
   torch.save(model.state_dict(), f'model_weights{epochCounter}.pth')

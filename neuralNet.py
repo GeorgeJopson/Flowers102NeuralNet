@@ -6,38 +6,26 @@ import torchvision.transforms.v2 as transforms
 import scipy
 import time
 
-normaliseCalcTransformation = transforms.Compose([
-  transforms.Resize((270,310)),
-  transforms.ToTensor(),
-])
-training_data = datasets.Flowers102(
-  root="data",
-  split="train",
-  download=True,
-  transform=normaliseCalcTransformation
-)
-# [R,G,B]
-meanValues = [0,0,0]
-stdValues = [0,0,0]
-for images, _ in training_data:
-   for i in range(3):
-      meanValues[i]+=torch.mean(images[i,:,:])
-      stdValues[i]+=torch.std(images[i,:,:])
-meanValues = [m/len(training_data) for m in meanValues]
-stdValues = [s/len(training_data) for s in stdValues]
+# For normalisation we use the mean and std values calculated for ImageNet
+# This is because calculating the mean/std values from just the test set would
+# be a small sample. 
+meanValues = [0.485,0.456,0.406]
+stdValues = [0.229,0.224,0.225]
 
-# The average height x width of each image is 540x620 so I am going to resize all images
-# to those dimensions
+# The data we are going to feed into the dataset are going to be 256x256 images
+
 transformationTraining = transforms.Compose([
-  transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.4),
-  transforms.RandomResizedCrop(size=(160,186)),
-  transforms.RandomHorizontalFlip(0.5),
+  transforms.RandomRotation(30), 
+  transforms.Resize(250),
+  transforms.RandomResizedCrop(227),
+  transforms.RandomHorizontalFlip(),
+  transforms.ColorJitter(),
   transforms.ToTensor(),
-  transforms.Normalize(mean = meanValues, std = stdValues)
+  transforms.Normalize(mean = meanValues,std = stdValues)
 ])
 
-transformationTest = transforms.Compose([
-  transforms.Resize((160,186)),
+transformationVal = transforms.Compose([
+  transforms.Resize(227),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -51,14 +39,14 @@ training_data = datasets.Flowers102(
 )
 print("Finished downloading training data")
 
-print("Downloading test data")
+print("Downloading validation data")
 validation_data = datasets.Flowers102(
   root="data",
   split="val",
   download=True,
-  transform=transformationTest
+  transform=transformationVal
 )
-print("Finished downloading test data")
+print("Finished validation test data")
 
 batch_size = 64
 
@@ -78,16 +66,38 @@ class NeuralNetwork(nn.Module):
   def __init__(self):
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 3, kernel_size=3,padding=1,padding_mode="replicate"),
+      nn.Conv2d(3, 64, kernel_size=11,stride=4,padding=(2,2)),
       nn.ReLU(),
-      nn.MaxPool2d(kernel_size=4),
-      nn.Dropout(0,5),
-      nn.Conv2d(3,3,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
+      nn.MaxPool2d(kernel_size=3,stride=2),
       nn.ReLU(),
-      nn.MaxPool2d(kernel_size=2),
-      nn.Dropout(0,5),
+
+      nn.Conv2d(64,192,kernel_size=5,stride=1,padding=(2,2)),
+      nn.ReLU(),
+      nn.MaxPool2d(kernel_size=3,stride=2),
+      nn.ReLU(),
+
+      nn.Conv2d(192,384,kernel_size=3,stride=1,padding=(1,1)),
+      nn.ReLU(),
+
+      nn.Conv2d(384,256,kernel_size=3,stride=1,padding=1),
+      nn.ReLU(),
+
+      nn.Conv2d(256,256,kernel_size=3,stride=1,padding=(1,1)),
+      nn.ReLU(),
+
+      nn.MaxPool2d(kernel_size=3,stride=2),
+      nn.ReLU(),
+
+      nn.AdaptiveAvgPool2d(output_size=(6,6)),
+
       nn.Flatten(),
-      nn.Linear(330, 102)
+      nn.Dropout(),
+      nn.Linear(9216,4096),
+      nn.ReLU(),
+      nn.Dropout(),
+      nn.Linear(4096,4096),
+      nn.ReLU(),
+      nn.Linear(4096,102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -141,11 +151,11 @@ while epochCounter<=200:
   for t in range(5):
       epochStartTime = time.time()
       epochCounter+=1
-      #print(f"Epoch {epochCounter}\n-------------------------------")
-      #print("Training")
+      print(f"Epoch {epochCounter}\n-------------------------------")
+      print("Training")
       train(train_dataloader, model, loss_func, optimizer)
       epochEndTime = time.time()
-      #print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
+      print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
   print(f"Epoch {epochCounter}")
   print("Testing on Training Set")
   test(train_dataloader,model,loss_func)

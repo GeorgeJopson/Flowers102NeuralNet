@@ -66,23 +66,23 @@ class NeuralNetwork(nn.Module):
   def __init__(self):
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 64, kernel_size=11,stride=4,padding=(2,2)),
+      nn.Conv2d(3, 4, kernel_size=11,stride=4,padding=(2,2)),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
       nn.ReLU(),
 
-      nn.Conv2d(64,192,kernel_size=5,stride=1,padding=(2,2)),
+      nn.Conv2d(4,12,kernel_size=5,stride=1,padding=(2,2)),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
       nn.ReLU(),
 
-      nn.Conv2d(192,384,kernel_size=3,stride=1,padding=(1,1)),
+      nn.Conv2d(12,24,kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
-      nn.Conv2d(384,256,kernel_size=3,stride=1,padding=1),
+      nn.Conv2d(24,16,kernel_size=3,stride=1,padding=1),
       nn.ReLU(),
 
-      nn.Conv2d(256,256,kernel_size=3,stride=1,padding=(1,1)),
+      nn.Conv2d(16,16,kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
@@ -92,12 +92,12 @@ class NeuralNetwork(nn.Module):
 
       nn.Flatten(),
       nn.Dropout(),
-      nn.Linear(9216,4096),
+      nn.Linear(576,256),
       nn.ReLU(),
       nn.Dropout(),
-      nn.Linear(4096,4096),
+      nn.Linear(256,256),
       nn.ReLU(),
-      nn.Linear(4096,102)
+      nn.Linear(256,102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -109,7 +109,7 @@ model = NeuralNetwork().to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.001,weight_decay=0.05)
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)
@@ -147,7 +147,7 @@ def test(dataloader, model, loss_fn):
 print("Starting training")
 
 epochCounter=0
-while epochCounter<=200:
+while True:
   for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1

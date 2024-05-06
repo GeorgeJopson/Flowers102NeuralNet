@@ -68,26 +68,26 @@ class NeuralNetwork(nn.Module):
   def __init__(self):
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 8, kernel_size=11,stride=4,padding=(2,2)),
-      nn.BatchNorm2d(8),
+      nn.Conv2d(3, 4, kernel_size=11,stride=4,padding=(2,2)),
+      nn.BatchNorm2d(4),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(8,24,kernel_size=5,stride=1,padding=(2,2)),
+      nn.Conv2d(4,12,kernel_size=5,stride=1,padding=(2,2)),
+      nn.BatchNorm2d(12),
+      nn.ReLU(),
+      nn.MaxPool2d(kernel_size=3,stride=2),
+
+      nn.Conv2d(12,24,kernel_size=3,stride=1,padding=(1,1)),
       nn.BatchNorm2d(24),
       nn.ReLU(),
-      nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(24,48,kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(48),
+      nn.Conv2d(24,16,kernel_size=3,stride=1,padding=1),
+      nn.BatchNorm2d(16),
       nn.ReLU(),
 
-      nn.Conv2d(48,32,kernel_size=3,stride=1,padding=1),
-      nn.BatchNorm2d(32),
-      nn.ReLU(),
-
-      nn.Conv2d(32,32,kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(32),
+      nn.Conv2d(16,16,kernel_size=3,stride=1,padding=(1,1)),
+      nn.BatchNorm2d(16),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
@@ -96,14 +96,14 @@ class NeuralNetwork(nn.Module):
 
       nn.Flatten(),
       nn.Dropout(),
-      nn.Linear(1152,502),
-      nn.BatchNorm1d(502),
+      nn.Linear(576,256),
+      nn.BatchNorm1d(256),
       nn.ReLU(),
       nn.Dropout(),
-      nn.Linear(502,502),
-      nn.BatchNorm1d(502),
+      nn.Linear(256,256),
+      nn.BatchNorm1d(256),
       nn.ReLU(),
-      nn.Linear(502,102)
+      nn.Linear(256,102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -115,8 +115,8 @@ model = NeuralNetwork().to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.1,weight_decay=0.001)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode="min",factor=0.1,patience=10,threshold=0.001,threshold_mode="abs")
+optimizer = torch.optim.Adam(model.parameters(),lr=0.01,weight_decay=0.001)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,20,0.5)
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)
@@ -160,7 +160,7 @@ bestValScore = 0
 bestEpoch = 0
 bestTime = 0
 while True:
-  for t in range(50):
+  for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1
       #print(f"Epoch {epochCounter}\n-------------------------------")

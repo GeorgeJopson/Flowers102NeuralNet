@@ -6,6 +6,8 @@ import torchvision.transforms.v2 as transforms
 import scipy
 import time
 
+startTime = time.time()
+
 # For normalisation we use the mean and std values calculated for ImageNet
 # This is because calculating the mean/std values from just the test set would
 # be a small sample. 
@@ -66,23 +68,23 @@ class NeuralNetwork(nn.Module):
   def __init__(self):
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 4, kernel_size=11,stride=4,padding=(2,2)),
+      nn.Conv2d(3, 8, kernel_size=11,stride=4,padding=(2,2)),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
       nn.ReLU(),
 
-      nn.Conv2d(4,12,kernel_size=5,stride=1,padding=(2,2)),
+      nn.Conv2d(8,24,kernel_size=5,stride=1,padding=(2,2)),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
       nn.ReLU(),
 
-      nn.Conv2d(12,24,kernel_size=3,stride=1,padding=(1,1)),
+      nn.Conv2d(24,48,kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
-      nn.Conv2d(24,16,kernel_size=3,stride=1,padding=1),
+      nn.Conv2d(48,32,kernel_size=3,stride=1,padding=1),
       nn.ReLU(),
 
-      nn.Conv2d(16,16,kernel_size=3,stride=1,padding=(1,1)),
+      nn.Conv2d(32,32,kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
@@ -92,12 +94,12 @@ class NeuralNetwork(nn.Module):
 
       nn.Flatten(),
       nn.Dropout(),
-      nn.Linear(576,256),
+      nn.Linear(1152,502),
       nn.ReLU(),
       nn.Dropout(),
-      nn.Linear(256,256),
+      nn.Linear(502,502),
       nn.ReLU(),
-      nn.Linear(256,102)
+      nn.Linear(502,102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -109,7 +111,7 @@ model = NeuralNetwork().to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.001,weight_decay=0.001)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.005,weight_decay=0.001)
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)
@@ -143,12 +145,17 @@ def test(dataloader, model, loss_fn):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    return round(100*correct,1)
 
 print("Starting training")
 
 epochCounter=0
+bestTrainScore = 0
+bestValScore = 0
+bestEpoch = 0
+bestTime = 0
 while True:
-  for t in range(20):
+  for t in range(50):
       epochStartTime = time.time()
       epochCounter+=1
       #print(f"Epoch {epochCounter}\n-------------------------------")
@@ -156,10 +163,18 @@ while True:
       train(train_dataloader, model, loss_func, optimizer)
       epochEndTime = time.time()
       #print(f"Epoch length(mins): {(epochEndTime-epochStartTime)/60}")
-  print(f"Epoch {epochCounter}")
+  epochTime = time.time()
+  hoursSinceStart = round((epochTime - startTime)/3600,2)
+  print(f"Epoch {epochCounter} - at {hoursSinceStart} hours")
   print("Testing on Training Set")
-  test(train_dataloader,model,loss_func)
+  trainScore = test(train_dataloader,model,loss_func)
   print("Testing on Validation Set")
-  test(validation_dataloader, model, loss_func)
-
+  valScore = test(validation_dataloader, model, loss_func)
+  if(valScore>bestValScore):
+     bestValScore = valScore
+     bestTrainScore = trainScore
+     bestEpoch = epochCounter
+     bestTime = hoursSinceStart
+  print(f"The best epoch so far was epoch {bestEpoch} at {bestTime} hours.\n"+
+        f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}")
   torch.save(model.state_dict(), f'model_weights{epochCounter}.pth')

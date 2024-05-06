@@ -69,35 +69,39 @@ class NeuralNetwork(nn.Module):
     super().__init__()
     self.layers = nn.Sequential(
       nn.Conv2d(3, 8, kernel_size=11,stride=4,padding=(2,2)),
+      nn.BatchNorm2d(8),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
-      nn.ReLU(),
 
       nn.Conv2d(8,24,kernel_size=5,stride=1,padding=(2,2)),
+      nn.BatchNorm2d(24),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
-      nn.ReLU(),
 
       nn.Conv2d(24,48,kernel_size=3,stride=1,padding=(1,1)),
+      nn.BatchNorm2d(48),
       nn.ReLU(),
 
       nn.Conv2d(48,32,kernel_size=3,stride=1,padding=1),
+      nn.BatchNorm2d(32),
       nn.ReLU(),
 
       nn.Conv2d(32,32,kernel_size=3,stride=1,padding=(1,1)),
+      nn.BatchNorm2d(32),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
-      nn.ReLU(),
 
       nn.AdaptiveAvgPool2d(output_size=(6,6)),
 
       nn.Flatten(),
       nn.Dropout(),
       nn.Linear(1152,502),
+      nn.BatchNorm1d(502),
       nn.ReLU(),
       nn.Dropout(),
       nn.Linear(502,502),
+      nn.BatchNorm1d(502),
       nn.ReLU(),
       nn.Linear(502,102)
     )
@@ -111,7 +115,8 @@ model = NeuralNetwork().to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.005,weight_decay=0.001)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.1,weight_decay=0.001)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode="min",factor=0.1,patience=10,threshold=0.001,threshold_mode="abs")
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)

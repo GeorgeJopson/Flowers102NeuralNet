@@ -72,25 +72,20 @@ class NeuralNetwork(nn.Module):
     super().__init__()
     self.layers = nn.Sequential(
       nn.Conv2d(3, int(round(convLayerScale*1)), kernel_size=11,stride=4,padding=(2,2)),
-      nn.BatchNorm2d(int(round(convLayerScale*1))),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(int(round(convLayerScale*1)),int(round(convLayerScale*(8/3))),kernel_size=5,stride=1,padding=(2,2)),
-      nn.BatchNorm2d(int(round(convLayerScale*(8/3)))),
+      nn.Conv2d(int(round(convLayerScale*1)),int(round(convLayerScale*(3))),kernel_size=5,stride=1,padding=(2,2)),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(int(round(convLayerScale*(8/3))),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.Conv2d(int(round(convLayerScale*(3))),int(round(convLayerScale*6)),kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
-      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=1),
-      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.Conv2d(int(round(convLayerScale*6)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=1),
       nn.ReLU(),
 
-      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*(8/3))),kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(int(round(convLayerScale*(8/3)))),
+      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=(1,1)),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
@@ -100,13 +95,11 @@ class NeuralNetwork(nn.Module):
       nn.Flatten(),
       nn.Dropout(),
 
-      nn.Linear(6*6*int(round(convLayerScale*(8/3))),int(round(linearLayerScale))),
-      nn.BatchNorm1d(round(linearLayerScale)),
+      nn.Linear(6*6*int(round(convLayerScale*(4))),int(round(linearLayerScale))),
       nn.ReLU(),
       nn.Dropout(),
 
       nn.Linear(round(linearLayerScale),round(linearLayerScale)),
-      nn.BatchNorm1d(round(linearLayerScale)),
       nn.ReLU(),
       nn.Dropout(),
 
@@ -182,15 +175,16 @@ print("Starting training")
 #     file.write(f"Validation Scores: {valScores}\n")
 #     file.write("\n")
 #   scaleFactor+=0.2
-scaleFactor = 1.5
+scaleFactor = 1
 print("Creating model")  
 model = NeuralNetwork(scaleFactor).to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1)
-lambda1 = lambda epoch : max(0.97**epoch,0.001)
-scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
+#optimizer = torch.optim.SGD(model.parameters(), lr=1)
+#lambda1 = lambda epoch : max(0.97**epoch,0.001)
+#scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.001,weight_decay=0.001)
 
 epochCounter=0
 bestTrainScore = 0

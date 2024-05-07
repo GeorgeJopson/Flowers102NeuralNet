@@ -65,21 +65,32 @@ elif torch.backend.mps.is_available():
 print(f"Using {device} device")
 
 class NeuralNetwork(nn.Module):
-  def __init__(self):
+  def __init__(self,widthScale):
+    # We use 4 and 256 as good base starting point to scale off of
+    convLayerScale = 4 * widthScale
+    linearLayerScale = 256 * widthScale
     super().__init__()
     self.layers = nn.Sequential(
-      nn.Conv2d(3, 4, kernel_size=11,stride=4,padding=(2,2)),
-      nn.BatchNorm2d(4),
+      nn.Conv2d(3, int(round(convLayerScale*1)), kernel_size=11,stride=4,padding=(2,2)),
+      nn.BatchNorm2d(int(round(convLayerScale*1))),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(4,12,kernel_size=5,stride=1,padding=(2,2)),
-      nn.BatchNorm2d(12),
+      nn.Conv2d(int(round(convLayerScale*1)),int(round(convLayerScale*(8/3))),kernel_size=5,stride=1,padding=(2,2)),
+      nn.BatchNorm2d(int(round(convLayerScale*(8/3)))),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=3,stride=2),
 
-      nn.Conv2d(12,24,kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(24),
+      nn.Conv2d(int(round(convLayerScale*(8/3))),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=(1,1)),
+      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.ReLU(),
+
+      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=1),
+      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.ReLU(),
+
+      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*(8/3))),kernel_size=3,stride=1,padding=(1,1)),
+      nn.BatchNorm2d(int(round(convLayerScale*(8/3)))),
       nn.ReLU(),
 
       nn.MaxPool2d(kernel_size=3,stride=2),
@@ -88,22 +99,22 @@ class NeuralNetwork(nn.Module):
 
       nn.Flatten(),
       nn.Dropout(),
-      nn.Linear(864,256),
-      nn.BatchNorm1d(256),
+
+      nn.Linear(6*6*int(round(convLayerScale*(8/3))),int(round(linearLayerScale))),
+      nn.BatchNorm1d(round(linearLayerScale)),
       nn.ReLU(),
-      nn.Linear(256,102)
+      nn.Dropout(),
+
+      nn.Linear(round(linearLayerScale),round(linearLayerScale)),
+      nn.BatchNorm1d(round(linearLayerScale)),
+      nn.ReLU(),
+      nn.Dropout(),
+
+      nn.Linear(round(linearLayerScale),102)
     )
   def forward(self,x):
     logits = self.layers(x)
     return logits
-
-print("Creating model")  
-# Remove .to(device)
-model = NeuralNetwork().to(device)
-print("Model created")
-
-loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.001,weight_decay=0.001)
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)
@@ -140,6 +151,46 @@ def test(dataloader, model, loss_fn):
     return round(100*correct,1)
 
 print("Starting training")
+
+# counter = 0
+
+# scaleFactor = 1
+# for i in range(6):
+#   trainScores =[]
+#   valScores = []
+#   trainingStartTime = time.time()
+#   print("Creating model")  
+#   # Remove .to(device)
+#   model = NeuralNetwork(scaleFactor).to(device)
+#   print("Model created")
+
+#   loss_func = nn.CrossEntropyLoss()
+#   optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
+#   epoch = 0
+#   while time.time() - trainingStartTime < 60*60*2:
+#       for e in range(20):
+#          epoch += 1
+#          train(train_dataloader, model, loss_func, optimizer)
+#       trainScores.append(test(train_dataloader,model,loss_func))
+#       valScores.append(test(validation_dataloader,model,loss_func))
+#       print(epoch)
+#   print(trainScores)
+#   print(valScores)
+#   with open("neuralNetScore.txt", 'a') as file:
+#     file.write(f"Scale Factor: {scaleFactor}\n")
+#     file.write(f"Train Scores: {trainScores}\n")
+#     file.write(f"Validation Scores: {valScores}\n")
+#     file.write("\n")
+#   scaleFactor+=0.2
+scaleFactor = 1.5
+print("Creating model")  
+model = NeuralNetwork(scaleFactor).to(device)
+print("Model created")
+
+loss_func = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1)
+lambda1 = lambda epoch : max(0.97**epoch,0.001)
+scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
 
 epochCounter=0
 bestTrainScore = 0

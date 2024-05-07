@@ -82,6 +82,7 @@ class NeuralNetwork(nn.Module):
       nn.Conv2d(4,8,kernel_size=3,stride=2,padding=1,padding_mode="replicate"),
       nn.ReLU(),
       nn.MaxPool2d(kernel_size=2),
+      
       nn.Flatten(),
       nn.Linear(41272, 128),
       nn.ReLU(),

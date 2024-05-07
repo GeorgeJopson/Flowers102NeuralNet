@@ -93,16 +93,27 @@ class NeuralNetwork(nn.Module):
 
       nn.MaxPool2d(kernel_size=3,stride=2),
 
+      nn.Conv2d(int(round(convLayerScale*4)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
+      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.ReLU(),
+
+      nn.Conv2d(int(round(convLayerScale*8)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
+      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.ReLU(),
+
       nn.AdaptiveAvgPool2d(output_size=(6,6)),
 
       nn.Flatten(),
-      nn.Dropout(),
 
       nn.Linear(6*6*int(round(convLayerScale*(4))),int(round(linearLayerScale))),
       nn.ReLU(),
       nn.Dropout(),
 
       nn.Linear(round(linearLayerScale),round(linearLayerScale)),
+      nn.ReLU(),
+      nn.Dropout(),
+
+      nn.Linear(round(linearLayerScale/2),round(linearLayerScale/2)),
       nn.ReLU(),
       nn.Dropout(),
 
@@ -126,9 +137,6 @@ def train(dataloader, model, loss_func, optimizer):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-    if batch % 5 == 0:
-      loss,current = loss.item(),(batch+1)*len(X)
-      #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
   
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)

@@ -161,7 +161,7 @@ print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adam(model.parameters(),lr=0.0005)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
 
 epochCounter=0
 bestTrainScore = 0

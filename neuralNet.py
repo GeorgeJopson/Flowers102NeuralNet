@@ -17,9 +17,7 @@ stdValues = [0.229,0.224,0.225]
 # The data we are going to feed into the dataset are going to be 256x256 images
 
 transformationTraining = transforms.Compose([
-  transforms.RandomRotation(30), 
   transforms.Resize((227,227)),
-  transforms.RandomHorizontalFlip(),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues,std = stdValues)
 ])
@@ -93,12 +91,19 @@ class NeuralNetwork(nn.Module):
 
       nn.MaxPool2d(kernel_size=3,stride=2),
 
+      nn.Conv2d(int(round(convLayerScale*4)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
+      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.ReLU(),
+
+      nn.Conv2d(int(round(convLayerScale*8)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
+      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.ReLU(),
+
       nn.AdaptiveAvgPool2d(output_size=(6,6)),
 
       nn.Flatten(),
-      nn.Dropout(),
 
-      nn.Linear(6*6*int(round(convLayerScale*(4))),int(round(linearLayerScale))),
+      nn.Linear(6*6*int(round(convLayerScale*(8))),int(round(linearLayerScale))),
       nn.ReLU(),
       nn.Dropout(),
 
@@ -106,7 +111,11 @@ class NeuralNetwork(nn.Module):
       nn.ReLU(),
       nn.Dropout(),
 
-      nn.Linear(round(linearLayerScale),102)
+      nn.Linear(round(linearLayerScale),round(linearLayerScale/2)),
+      nn.ReLU(),
+      nn.Dropout(),
+
+      nn.Linear(round(linearLayerScale/2),102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -126,9 +135,6 @@ def train(dataloader, model, loss_func, optimizer):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-    if batch % 5 == 0:
-      loss,current = loss.item(),(batch+1)*len(X)
-      #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
   
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -155,7 +161,7 @@ print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.0005)
 
 epochCounter=0
 bestTrainScore = 0
@@ -163,7 +169,7 @@ bestValScore = 0
 bestEpoch = 0
 bestTime = 0
 while True:
-  for t in range(5):
+  for t in range(20):
       epochStartTime = time.time()
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)

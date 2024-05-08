@@ -17,7 +17,12 @@ stdValues = [0.229,0.224,0.225]
 # The data we are going to feed into the dataset are going to be 256x256 images
 
 transformationTraining = transforms.Compose([
+  transforms.RandomRotation(30), 
+  transforms.Resize(250),
+  transforms.RandomResizedCrop(227),
   transforms.Resize((227,227)),
+  transforms.RandomHorizontalFlip(),
+  transforms.ColorJitter(),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues,std = stdValues)
 ])

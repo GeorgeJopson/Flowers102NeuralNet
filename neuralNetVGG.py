@@ -10,25 +10,28 @@ startTime = time.time()
 
 # For normalisation we use the mean and std values calculated for ImageNet
 # This is because calculating the mean/std values from just the test set would
-# be a small sample. 
+# be a small sample.
 meanValues = [0.485,0.456,0.406]
 stdValues = [0.229,0.224,0.225]
 
 # The data we are going to feed into the dataset are going to be 256x256 images
 
 transformationTraining = transforms.Compose([
-  transforms.RandomRotation(30), 
-  transforms.Resize(250),
-  transforms.RandomResizedCrop(227),
-  transforms.Resize((227,227)),
-  transforms.RandomHorizontalFlip(),
-  transforms.ColorJitter(),
+  # transforms.RandomRotation(30),
+  # transforms.Resize(250),
+  # transforms.RandomResizedCrop(224),
+  # transforms.Resize((224,224)),
+  # transforms.RandomHorizontalFlip(),
+  # transforms.ColorJitter(),
+  # transforms.ToTensor(),
+  # transforms.Normalize(mean = meanValues,std = stdValues)
+  transforms.Resize((224,224)),
   transforms.ToTensor(),
-  transforms.Normalize(mean = meanValues,std = stdValues)
+  transforms.Normalize(mean = meanValues, std = stdValues)
 ])
 
 transformationVal = transforms.Compose([
-  transforms.Resize((227,227)),
+  transforms.Resize((224,224)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -66,61 +69,51 @@ elif torch.backend.mps.is_available():
 print(f"Using {device} device")
 
 class NeuralNetwork(nn.Module):
-  def __init__(self,widthScale):
-    # We use 4 and 256 as good base starting point to scale off of
-    convLayerScale = 4 * widthScale
-    linearLayerScale = 256 * widthScale
+  def __init__(self):
     super().__init__()
+    paddingAmount = 1
+    scale = 0.25
     self.layers = nn.Sequential(
-      nn.Conv2d(3, int(round(convLayerScale*1)), kernel_size=11,stride=4,padding=(2,2)),
-      nn.BatchNorm2d(int(round(convLayerScale*1))),
+      nn.Conv2d(3,int(64*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(64*scale)),
       nn.ReLU(),
-      nn.MaxPool2d(kernel_size=3,stride=2),
+      nn.MaxPool2d(2),
 
-      nn.Conv2d(int(round(convLayerScale*1)),int(round(convLayerScale*(3))),kernel_size=5,stride=1,padding=(2,2)),
-      nn.BatchNorm2d(int(round(convLayerScale*3))),
+      nn.Conv2d(int(64*scale),int(128*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(128*scale)),
       nn.ReLU(),
-      nn.MaxPool2d(kernel_size=3,stride=2),
+      nn.MaxPool2d(2),
 
-      nn.Conv2d(int(round(convLayerScale*(3))),int(round(convLayerScale*6)),kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(int(round(convLayerScale*6))),
+      nn.Conv2d(int(128*scale),int(256*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(256*scale)),
       nn.ReLU(),
-
-      nn.Conv2d(int(round(convLayerScale*6)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=1),
-      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.Conv2d(int(256*scale),int(256*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(256*scale)),
       nn.ReLU(),
+      nn.MaxPool2d(2),
 
-      nn.Conv2d(int(round(convLayerScale*4)),int(round(convLayerScale*4)),kernel_size=3,stride=1,padding=(1,1)),
-      nn.BatchNorm2d(int(round(convLayerScale*4))),
+      nn.Conv2d(int(256*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(512*scale)),
       nn.ReLU(),
-
-      nn.MaxPool2d(kernel_size=3,stride=2),
-
-      nn.Conv2d(int(round(convLayerScale*4)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
-      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(512*scale)),
       nn.ReLU(),
+      nn.MaxPool2d(2),
 
-      nn.Conv2d(int(round(convLayerScale*8)), int(round(convLayerScale*8)), kernel_size=3, stride=1, padding=(1, 1)),
-      nn.BatchNorm2d(int(round(convLayerScale*8))),
+      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(512*scale)),
       nn.ReLU(),
-
-      nn.AdaptiveAvgPool2d(output_size=(6,6)),
+      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
+      nn.BatchNorm2d(int(512*scale)),
+      nn.ReLU(),
+      nn.MaxPool2d(2),
 
       nn.Flatten(),
-
-      nn.Linear(6*6*int(round(convLayerScale*(8))),int(round(linearLayerScale))),
+      nn.Linear(int(25088*scale),int(4096*scale)),
       nn.ReLU(),
-      nn.Dropout(),
-
-      nn.Linear(round(linearLayerScale),round(linearLayerScale)),
+      nn.Linear(int(4096*scale),int(4096*scale)),
       nn.ReLU(),
-      nn.Dropout(),
-
-      nn.Linear(round(linearLayerScale),round(linearLayerScale/2)),
-      nn.ReLU(),
-      nn.Dropout(),
-
-      nn.Linear(round(linearLayerScale/2),102)
+      nn.Linear(int(4096*scale),102)
     )
   def forward(self,x):
     logits = self.layers(x)
@@ -140,7 +133,7 @@ def train(dataloader, model, loss_func, optimizer):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-  
+
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
@@ -159,15 +152,13 @@ def test(dataloader, model, loss_fn):
 
 print("Starting training")
 
-scaleFactor = 1
-print("Creating model")  
-model = NeuralNetwork(scaleFactor).to(device)
+print("Creating model")
+model = NeuralNetwork().to(device)
 print("Model created")
 
 loss_func = nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adam(model.parameters(),lr=0.0005)
-
+optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
 epochCounter=0
 bestTrainScore = 0
 bestValScore = 0
@@ -175,10 +166,8 @@ bestEpoch = 0
 bestTime = 0
 while True:
   for t in range(20):
-      epochStartTime = time.time()
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)
-      epochEndTime = time.time()
   epochTime = time.time()
   hoursSinceStart = round((epochTime - startTime)/3600,2)
   print(f"Epoch {epochCounter} - at {hoursSinceStart} hours")

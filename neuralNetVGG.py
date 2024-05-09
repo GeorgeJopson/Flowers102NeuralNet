@@ -1,12 +1,106 @@
 import torch
+seed = 42
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.backends.cudnn.deterministic = True
+
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
 import torchvision.transforms.v2 as transforms
 import scipy
 import time
+class NeuralNet(nn.Module):
+    def __init__(self, num_classes=10):
+        super(NeuralNet, self).__init__()
+        
+        self.convLayers = nn.Sequential(
+            # Layer 1
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
 
-startTime = time.time()
+            # Layer 2
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(), 
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            # Layer 3
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+
+            # Layer 4
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            # Layer 5
+            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+
+            # Layer 6
+            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+
+            # Layer 7
+            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            # Layer 8
+            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+
+            # Layer 9
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+
+            # Layer 10
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            # Layer 11
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+
+            # Layer 12
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+
+            # Layer 13
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size = 2, stride = 2),
+
+            nn.Flatten()
+        )
+
+        self.linearLayers = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(7*7*512, 4096),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(4096, 4096),
+            nn.ReLU(),
+            nn.Linear(4096, 102)
+        )
+    def forward(self, x):
+        out = self.convLayers(x)
+        out = self.linearLayers(out)
+        return out
 
 # For normalisation we use the mean and std values calculated for ImageNet
 # This is because calculating the mean/std values from just the test set would
@@ -18,20 +112,23 @@ stdValues = [0.229,0.224,0.225]
 
 transformationTraining = transforms.Compose([
   # transforms.RandomRotation(30),
-  # transforms.Resize(250),
-  # transforms.RandomResizedCrop(224),
-  # transforms.Resize((224,224)),
+  # transforms.Resize((300,300)),
+  # transforms.RandomResizedCrop((227,227)),
   # transforms.RandomHorizontalFlip(),
-  # transforms.ColorJitter(),
+  # transforms.RandomVerticalFlip(),
+  # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
   # transforms.ToTensor(),
   # transforms.Normalize(mean = meanValues,std = stdValues)
-  transforms.Resize((224,224)),
+
+  transforms.Resize((256,256)),
+  transforms.CenterCrop((227,227)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
 
 transformationVal = transforms.Compose([
-  transforms.Resize((224,224)),
+  transforms.Resize((256,256)),
+  transforms.CenterCrop((227,227)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -66,58 +163,8 @@ if torch.cuda.is_available():
   device = "cuda"
 elif torch.backend.mps.is_available():
   device = "mps"
+
 print(f"Using {device} device")
-
-class NeuralNetwork(nn.Module):
-  def __init__(self):
-    super().__init__()
-    paddingAmount = 1
-    scale = 0.25
-    self.layers = nn.Sequential(
-      nn.Conv2d(3,int(64*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(64*scale)),
-      nn.ReLU(),
-      nn.MaxPool2d(2),
-
-      nn.Conv2d(int(64*scale),int(128*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(128*scale)),
-      nn.ReLU(),
-      nn.MaxPool2d(2),
-
-      nn.Conv2d(int(128*scale),int(256*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(256*scale)),
-      nn.ReLU(),
-      nn.Conv2d(int(256*scale),int(256*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(256*scale)),
-      nn.ReLU(),
-      nn.MaxPool2d(2),
-
-      nn.Conv2d(int(256*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(512*scale)),
-      nn.ReLU(),
-      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(512*scale)),
-      nn.ReLU(),
-      nn.MaxPool2d(2),
-
-      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(512*scale)),
-      nn.ReLU(),
-      nn.Conv2d(int(512*scale),int(512*scale),kernel_size=3,padding=paddingAmount),
-      nn.BatchNorm2d(int(512*scale)),
-      nn.ReLU(),
-      nn.MaxPool2d(2),
-
-      nn.Flatten(),
-      nn.Linear(int(25088*scale),int(4096*scale)),
-      nn.ReLU(),
-      nn.Linear(int(4096*scale),int(4096*scale)),
-      nn.ReLU(),
-      nn.Linear(int(4096*scale),102)
-    )
-  def forward(self,x):
-    logits = self.layers(x)
-    return logits
 
 def train(dataloader, model, loss_func, optimizer):
   size = len(dataloader.dataset)
@@ -133,6 +180,9 @@ def train(dataloader, model, loss_func, optimizer):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
+    if batch % 5 == 0:
+      loss,current = loss.item(),(batch+1)*len(X)
+      #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -147,39 +197,44 @@ def test(dataloader, model, loss_fn):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    return round(100*correct,1)
-
-print("Starting training")
+    #print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    return round(100*correct,3)
 
 print("Creating model")
-model = NeuralNetwork().to(device)
+# Remove .to(device)
 print("Model created")
+batch_size = 64
+learning_rate = 0.005
 
+model = NeuralNet().to(device)
+
+# Loss and optimizer
 loss_func = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
 
-optimizer = torch.optim.Adam(model.parameters(),lr=0.001)
+print("Starting training")
+trainingStart = time.time()
 epochCounter=0
 bestTrainScore = 0
 bestValScore = 0
 bestEpoch = 0
 bestTime = 0
 while True:
-  for t in range(20):
+  for t in range(5):
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)
-  epochTime = time.time()
-  hoursSinceStart = round((epochTime - startTime)/3600,2)
-  print(f"Epoch {epochCounter} - at {hoursSinceStart} hours")
-  print("Testing on Training Set")
+  hoursSinceStart = round((time.time() - trainingStart)/3600,2)
+  print(f"Epoch {epochCounter} finished at {hoursSinceStart} hours")
   trainScore = test(train_dataloader,model,loss_func)
-  print("Testing on Validation Set")
   valScore = test(validation_dataloader, model, loss_func)
+  print(f"Accuracy on training set: {trainScore} +++ Accuracy on validation set: {valScore}")
   if(valScore>bestValScore):
      bestValScore = valScore
      bestTrainScore = trainScore
      bestEpoch = epochCounter
      bestTime = hoursSinceStart
+     torch.save(model.state_dict(), f'best_model_weights.pth')
   print(f"The best epoch so far was epoch {bestEpoch} at {bestTime} hours.\n"+
-        f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}")
-  torch.save(model.state_dict(), f'best_model_weights.pth')
+        f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}\n")
+
+  

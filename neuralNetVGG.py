@@ -114,7 +114,7 @@ stdValues = [0.229,0.224,0.225]
 transformationTraining = transforms.Compose([
   #transforms.RandomRotation(30),
   #transforms.RandomResizedCrop((227,227)),
-  # transforms.RandomHorizontalFlip(),
+  transforms.RandomHorizontalFlip(),
   # transforms.ToTensor(),
   # transforms.Normalize(mean = meanValues,std = stdValues)
 

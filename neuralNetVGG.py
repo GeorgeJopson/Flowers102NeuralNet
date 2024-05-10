@@ -13,7 +13,7 @@ import time
 class NeuralNet(nn.Module):
     def __init__(self, num_classes=10):
         super(NeuralNet, self).__init__()
-        
+
         self.convLayers = nn.Sequential(
             # Layer 1
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
@@ -23,7 +23,7 @@ class NeuralNet(nn.Module):
             # Layer 2
             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(), 
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2),
 
             # Layer 3
@@ -89,12 +89,13 @@ class NeuralNet(nn.Module):
         )
 
         self.linearLayers = nn.Sequential(
-            nn.Dropout(0.5),
+            #nn.Dropout(0.5),
             nn.Linear(7*7*512, 4096),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(),
+            #nn.Dropout(),
             nn.Linear(4096, 102)
         )
     def forward(self, x):
@@ -111,12 +112,9 @@ stdValues = [0.229,0.224,0.225]
 # The data we are going to feed into the dataset are going to be 256x256 images
 
 transformationTraining = transforms.Compose([
-  # transforms.RandomRotation(30),
-  # transforms.Resize((300,300)),
-  # transforms.RandomResizedCrop((227,227)),
+  #transforms.RandomRotation(30),
+  #transforms.RandomResizedCrop((227,227)),
   # transforms.RandomHorizontalFlip(),
-  # transforms.RandomVerticalFlip(),
-  # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
   # transforms.ToTensor(),
   # transforms.Normalize(mean = meanValues,std = stdValues)
 
@@ -151,10 +149,10 @@ validation_data = datasets.Flowers102(
 )
 print("Finished validation test data")
 
-batch_size = 64
+batch_size = 32
 
 # Create data loaders.
-train_dataloader = DataLoader(training_data, batch_size=batch_size)
+train_dataloader = DataLoader(training_data, batch_size=batch_size,shuffle=True)
 validation_dataloader = DataLoader(validation_data,batch_size=batch_size)
 
 # Find which device we can run the project on
@@ -204,13 +202,27 @@ print("Creating model")
 # Remove .to(device)
 print("Model created")
 batch_size = 64
-learning_rate = 0.005
+learning_rate = 0.0005
 
 model = NeuralNet().to(device)
 
 # Loss and optimizer
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.005, momentum = 0.9)  
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.00005, momentum = 0.9)
+# from torch.optim.lr_scheduler import _LRScheduler
+
+# class CustomLR(_LRScheduler):
+#     def __init__(self, optimizer, last_epoch=-1):
+#         self.initial_lr = 0.001
+#         self.lr_after_100_epochs = 0.0001
+#         super(CustomLR, self).__init__(optimizer, last_epoch)
+
+#     def get_lr(self):
+#         if self.last_epoch < 100:
+#             return [self.initial_lr] * len(self.base_lrs)
+#         else:
+#             return [self.lr_after_100_epochs] * len(self.base_lrs)
+# scheduler = CustomLR(optimizer)
 
 print("Starting training")
 trainingStart = time.time()
@@ -220,11 +232,13 @@ bestValScore = 0
 bestEpoch = 0
 bestTime = 0
 while True:
-  for t in range(5):
+  for t in range(20):
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)
+      #scheduler.step()
   hoursSinceStart = round((time.time() - trainingStart)/3600,2)
   print(f"Epoch {epochCounter} finished at {hoursSinceStart} hours")
+  print("Learning rate:", optimizer.param_groups[0]['lr'])
   trainScore = test(train_dataloader,model,loss_func)
   valScore = test(validation_dataloader, model, loss_func)
   print(f"Accuracy on training set: {trainScore} +++ Accuracy on validation set: {valScore}")
@@ -236,5 +250,3 @@ while True:
      torch.save(model.state_dict(), f'best_model_weights.pth')
   print(f"The best epoch so far was epoch {bestEpoch} at {bestTime} hours.\n"+
         f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}\n")
-
-  

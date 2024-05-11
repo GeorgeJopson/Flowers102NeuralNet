@@ -115,6 +115,8 @@ transformationTraining = transforms.Compose([
   transforms.RandomRotation(30),
   transforms.RandomResizedCrop((227,227)),
   transforms.RandomHorizontalFlip(),
+  transforms.RandomVerticalFlip(),
+  transforms.ColorJitter(brightness=0.2,saturation=0.2),
   # transforms.ToTensor(),
   # transforms.Normalize(mean = meanValues,std = stdValues)
 

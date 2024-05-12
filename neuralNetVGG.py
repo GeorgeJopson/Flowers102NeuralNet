@@ -210,7 +210,7 @@ model = NeuralNet().to(device)
 
 # Loss and optimizer
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.00005, momentum = 0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.0005, momentum = 0.9)
 # from torch.optim.lr_scheduler import _LRScheduler
 
 # class CustomLR(_LRScheduler):

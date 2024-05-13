@@ -11,7 +11,7 @@ import torchvision.transforms.v2 as transforms
 import scipy
 import time
 class NeuralNet(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self):
         super(NeuralNet, self).__init__()
 
         self.convLayers = nn.Sequential(
@@ -43,9 +43,9 @@ class NeuralNet(nn.Module):
             nn.ReLU(),
 
             # Layer 6
-            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
+            #nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+            #nn.BatchNorm2d(256),
+            #nn.ReLU(),
 
             # Layer 7
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
@@ -70,9 +70,9 @@ class NeuralNet(nn.Module):
             nn.MaxPool2d(kernel_size = 2, stride = 2),
 
             # Layer 11
-            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
+            #nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            #nn.BatchNorm2d(512),
+            #nn.ReLU(),
 
             # Layer 12
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),

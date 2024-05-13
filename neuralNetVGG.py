@@ -43,9 +43,9 @@ class NeuralNet(nn.Module):
             nn.ReLU(),
 
             # Layer 6
-            #nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
-            #nn.BatchNorm2d(256),
-            #nn.ReLU(),
+            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
 
             # Layer 7
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
@@ -70,9 +70,9 @@ class NeuralNet(nn.Module):
             nn.MaxPool2d(kernel_size = 2, stride = 2),
 
             # Layer 11
-            #nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
-            #nn.BatchNorm2d(512),
-            #nn.ReLU(),
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
 
             # Layer 12
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
@@ -112,11 +112,11 @@ stdValues = [0.229,0.224,0.225]
 # The data we are going to feed into the dataset are going to be 256x256 images
 
 transformationTraining = transforms.Compose([
-  transforms.RandomRotation(30),
+  transforms.RandomRotation(60),
   transforms.RandomResizedCrop((227,227)),
   transforms.RandomHorizontalFlip(),
   transforms.RandomVerticalFlip(),
-  transforms.ColorJitter(brightness=0.2,saturation=0.2,contrast=0.2),
+  transforms.ColorJitter(brightness=0.4,saturation=0.4,contrast=0.4,hue=0.1),
   # transforms.ToTensor(),
   # transforms.Normalize(mean = meanValues,std = stdValues)
 
@@ -204,13 +204,13 @@ print("Creating model")
 # Remove .to(device)
 print("Model created")
 batch_size = 64
-learning_rate = 0.0005
 
 model = NeuralNet().to(device)
 
 # Loss and optimizer
 loss_func = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay = 0.0005, momentum = 0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay = 0.001, momentum = 0.9)
+scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001,max_lr=0.01,step_size_up=150,mode="triangular2")
 # from torch.optim.lr_scheduler import _LRScheduler
 
 # class CustomLR(_LRScheduler):
@@ -237,7 +237,7 @@ while True:
   for t in range(20):
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)
-      #scheduler.step()
+      scheduler.step()
   hoursSinceStart = round((time.time() - trainingStart)/3600,2)
   print(f"Epoch {epochCounter} finished at {hoursSinceStart} hours")
   print("Learning rate:", optimizer.param_groups[0]['lr'])
@@ -252,3 +252,4 @@ while True:
      torch.save(model.state_dict(), f'best_model_weights.pth')
   print(f"The best epoch so far was epoch {bestEpoch} at {bestTime} hours.\n"+
         f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}\n")
+print("Training finished")

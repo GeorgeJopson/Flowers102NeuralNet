@@ -1,0 +1,4 @@
+The model can be trained by running neural_net_train. Originally this was running on google colab using a T4 GPU in about 4.8 hours. However it could be run in any environment with sufficient meory as long as torch, torchvision and scipy are downloaded. (The exact versions needed can be found in requirements.in). If there isn't enough memory,the program may crash.
+neural_net_train will produce a file called model_weights.pth containing the neural net weights.
+
+Then the model can be evaluated using the neural_net_test python program, as long as model_weights.pth is in the same folder.

@@ -1,19 +1,19 @@
 import torch
-seed = 42
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-torch.backends.cudnn.deterministic = True
-
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
 import torchvision.transforms.v2 as transforms
 import scipy
 import time
+
+seed = 42
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.backends.cudnn.deterministic = True
+
 class NeuralNet(nn.Module):
     def __init__(self):
         super(NeuralNet, self).__init__()
-
         self.convLayers = nn.Sequential(
             # Layer 1
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
@@ -89,13 +89,11 @@ class NeuralNet(nn.Module):
         )
 
         self.linearLayers = nn.Sequential(
-            #nn.Dropout(0.5),
             nn.Linear(7*7*512, 4096),
             nn.ReLU(),
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(),
-            #nn.Dropout(),
             nn.Linear(4096, 102)
         )
     def forward(self, x):
@@ -109,26 +107,20 @@ class NeuralNet(nn.Module):
 meanValues = [0.485,0.456,0.406]
 stdValues = [0.229,0.224,0.225]
 
-# The data we are going to feed into the dataset are going to be 256x256 images
-
+# The data we are going to feed into the dataset are going to be 227x227 images
 transformationTraining = transforms.Compose([
   transforms.RandomRotation(90),
-  transforms.RandomResizedCrop((227,227)),
+  transforms.RandomResizedCrop((224,224)),
   transforms.RandomHorizontalFlip(),
   transforms.RandomVerticalFlip(),
   transforms.ColorJitter(brightness=0.4,saturation=0.4,contrast=0.4,hue=0.15),
-  # transforms.ToTensor(),
-  # transforms.Normalize(mean = meanValues,std = stdValues)
-
-  # transforms.Resize((256,256)),
-  # transforms.CenterCrop((227,227)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
 
 transformationVal = transforms.Compose([
   transforms.Resize((256,256)),
-  transforms.CenterCrop((227,227)),
+  transforms.CenterCrop((224,224)),
   transforms.ToTensor(),
   transforms.Normalize(mean = meanValues, std = stdValues)
 ])
@@ -149,11 +141,10 @@ validation_data = datasets.Flowers102(
   download=True,
   transform=transformationVal
 )
-print("Finished validation test data")
-
-batch_size = 32
+print("Finished downloading validation data")
 
 # Create data loaders.
+batch_size = 32
 train_dataloader = DataLoader(training_data, batch_size=batch_size,shuffle=True)
 validation_dataloader = DataLoader(validation_data,batch_size=batch_size)
 
@@ -167,11 +158,8 @@ elif torch.backend.mps.is_available():
 print(f"Using {device} device")
 
 def train(dataloader, model, loss_func, optimizer):
-  size = len(dataloader.dataset)
   model.train()
-  counter = 0
   for batch, (X,y) in enumerate(dataloader):
-    counter+=1
     X,y = X.to(device), y.to(device)
     # Compute prediction error
     pred = model(X)
@@ -180,9 +168,6 @@ def train(dataloader, model, loss_func, optimizer):
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-    if batch % 5 == 0:
-      loss,current = loss.item(),(batch+1)*len(X)
-      #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
@@ -197,34 +182,15 @@ def test(dataloader, model, loss_fn):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    #print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     return round(100*correct,3)
 
 print("Creating model")
-# Remove .to(device)
-print("Model created")
-batch_size = 64
-
 model = NeuralNet().to(device)
+print("Model created")
 
 # Loss and optimizer
 loss_func = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay = 0.001, momentum = 0.9)
-scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001,max_lr=0.01,step_size_up=150,mode="triangular2")
-# from torch.optim.lr_scheduler import _LRScheduler
-
-# class CustomLR(_LRScheduler):
-#     def __init__(self, optimizer, last_epoch=-1):
-#         self.initial_lr = 0.001
-#         self.lr_after_100_epochs = 0.0001
-#         super(CustomLR, self).__init__(optimizer, last_epoch)
-
-#     def get_lr(self):
-#         if self.last_epoch < 100:
-#             return [self.initial_lr] * len(self.base_lrs)
-#         else:
-#             return [self.lr_after_100_epochs] * len(self.base_lrs)
-# scheduler = CustomLR(optimizer)
 
 print("Starting training")
 trainingStart = time.time()
@@ -233,23 +199,32 @@ bestTrainScore = 0
 bestValScore = 0
 bestEpoch = 0
 bestTime = 0
-while True:
+
+trainScores = []
+valScores = []
+epochCounters = []
+
+while epochCounter<899:
   for t in range(20):
       epochCounter+=1
       train(train_dataloader, model, loss_func, optimizer)
-      scheduler.step()
   hoursSinceStart = round((time.time() - trainingStart)/3600,2)
   print(f"Epoch {epochCounter} finished at {hoursSinceStart} hours")
   print("Learning rate:", optimizer.param_groups[0]['lr'])
   trainScore = test(train_dataloader,model,loss_func)
   valScore = test(validation_dataloader, model, loss_func)
+
+  trainScores.append(trainScore)
+  valScores.append(valScore)
+  epochCounters.append(epochCounter)
+
   print(f"Accuracy on training set: {trainScore} +++ Accuracy on validation set: {valScore}")
   if(valScore>bestValScore):
      bestValScore = valScore
      bestTrainScore = trainScore
      bestEpoch = epochCounter
      bestTime = hoursSinceStart
-     torch.save(model.state_dict(), f'best_model_weights.pth')
+     torch.save(model.state_dict(), f'model_weights.pth')
   print(f"The best epoch so far was epoch {bestEpoch} at {bestTime} hours.\n"+
         f"It achieved a train score of {bestTrainScore} and a val score of {bestValScore}\n")
 print("Training finished")
